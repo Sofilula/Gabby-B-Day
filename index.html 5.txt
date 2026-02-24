@@ -1,0 +1,1036 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DC OVO – v7</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    margin: 0;
+    background: #05060a;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .wrapper {
+    margin: 16px;
+    background: #0b0c12;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 0 0 3px #ff2f92, 0 0 0 6px #f7c948;
+    max-width: 980px;
+    width: 100%;
+  }
+
+  #menu, #charSelect, #levelSelect, #gameContainer {
+    display: none;
+  }
+
+  h1, h2 {
+    color: white;
+    text-align: center;
+  }
+
+  .btn {
+    display: block;
+    margin: 12px auto;
+    padding: 14px 30px;
+    background: #ff2f92;
+    border: 3px solid #ffd400;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    width: 260px;
+    cursor: pointer;
+    color: white;
+    box-shadow: 0 6px 0 #b0003a;
+    text-align: center;
+  }
+
+  .btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 #b0003a;
+  }
+
+  /* Character Select */
+  #charSelect {
+    display: flex;
+    justify-content: space-between;
+    color: white;
+  }
+
+  #charGrid {
+    width: 48%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .charIcon {
+    background: #111827;
+    border: 3px solid #ff2f92;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    color: white;
+    font-size: 0.95rem;
+  }
+
+  .charIcon.selected {
+    background: #ff2f92;
+  }
+
+  #charPreview {
+    width: 48%;
+    text-align: center;
+  }
+
+  #charArt {
+    width: 200px;
+    height: 280px;
+    margin: 0 auto 20px auto;
+    background: #111827;
+    border: 3px solid #ffd400;
+    border-radius: 10px;
+    color: white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  /* Game Canvas */
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: linear-gradient(#0d47a1, #000);
+    border-radius: 8px;
+  }
+
+  /* Controls */
+  .controls {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .btnCtrl {
+    width: 70px;
+    height: 70px;
+    border-radius: 18px;
+    background: #ff2f92;
+    border: 4px solid #ffd400;
+    box-shadow: 0 5px 0 #b0003a;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+  }
+
+  .btnCtrl:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #b0003a;
+  }
+
+  .combatBtns {
+    display: none;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .combatBtns.visible {
+    display: flex;
+  }
+
+  @media (max-width: 700px) {
+    .btnCtrl {
+      width: 60px;
+      height: 60px;
+      font-size: 1.5rem;
+    }
+  }
+
+  /* Lives */
+  #lives {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+  }
+
+  .batlife {
+    width: 34px;
+    height: 26px;
+    background: url('data:image/svg+xml;utf8,<svg width="60" height="40" xmlns="http://www.w3.org/2000/svg"><path d="M5 20 L15 5 L25 15 L30 5 L35 15 L45 5 L55 20 L45 30 L30 35 L15 30 Z" fill="black" stroke="gold" stroke-width="3"/></svg>');
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
+
+  .batlife.empty {
+    opacity: 0.25;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;
+    font-size: 2rem;
+    z-index: 3;
+    border-radius: 8px;
+  }
+
+  .overlay.visible {
+    display: flex;
+  }
+
+  .overlay button {
+    margin-top: 16px;
+    padding: 8px 18px;
+    background: #ff2f92;
+    border: 3px solid #ffd400;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  #gameShell {
+    position: relative;
+  }
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+  <!-- MAIN MENU -->
+  <div id="menu">
+    <h1>DC OVO – v7</h1>
+    <div class="btn" onclick="openCharSelect()">Choose Character</div>
+    <div class="btn" onclick="openLevelSelect()">Choose Level</div>
+    <div class="btn" onclick="startGame()">Play</div>
+  </div>
+
+  <!-- CHARACTER SELECT -->
+  <div id="charSelect">
+    <div id="charGrid"></div>
+
+    <div id="charPreview">
+      <h2 id="charName">Batman</h2>
+      <div id="charArt">Batman<br>Armored Gotham Knight</div>
+      <div class="btn" onclick="confirmCharacter()">Select</div>
+      <div class="btn" onclick="returnToMenu()">Back</div>
+    </div>
+  </div>
+
+  <!-- LEVEL SELECT -->
+  <div id="levelSelect">
+    <h2>Select Level</h2>
+    <div class="btn" onclick="chooseLevel(1)">Level 1 — Gotham Rooftops</div>
+    <div class="btn" onclick="chooseLevel(2)">Level 2 — Ice Lab (Mr. Freeze)</div>
+    <div class="btn" onclick="chooseLevel(3)">Level 3 — Arkham Escape</div>
+    <div class="btn" onclick="returnToMenu()">Back</div>
+  </div>
+
+  <!-- GAME -->
+  <div id="gameContainer">
+    <div id="gameShell">
+      <canvas id="canvas" width="960" height="540"></canvas>
+
+      <div id="lives">
+        <div class="batlife" id="life1"></div>
+        <div class="batlife" id="life2"></div>
+        <div class="batlife" id="life3"></div>
+      </div>
+
+      <div class="overlay" id="gameover">
+        <div>BATMAN HAS FALLEN</div>
+        <button onclick="retryGame()">Retry</button>
+        <button onclick="backToMenuFromGame()">Menu</button>
+      </div>
+
+      <div class="overlay" id="levelcomplete">
+        <div>LEVEL COMPLETE</div>
+        <button onclick="nextOrMenu()">Continue</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div>
+        <div class="btnCtrl" id="btn-left">&lt;</div>
+        <div class="btnCtrl" id="btn-right">&gt;</div>
+      </div>
+
+      <div>
+        <div class="btnCtrl" id="btn-up">↑</div>
+        <div class="btnCtrl" id="btn-down">↓</div>
+
+        <div class="combatBtns" id="combatBtns">
+          <div class="btnCtrl" id="btn-punch">P</div>
+          <div class="btnCtrl" id="btn-rang">B</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- MENU STATE ---------- */
+document.getElementById("menu").style.display = "block";
+
+let selectedCharacter = "Batman";
+let selectedLevel = 1;
+
+const heroDescriptions = {
+  "Batman": "Armored Gotham Knight",
+  "Nightwing": "Acrobatic Vigilante",
+  "Robin": "Agile Sidekick",
+  "Batgirl": "Smart and Swift",
+  "Catwoman": "Fast and Sneaky",
+  "Red Hood": "Aggressive Fighter",
+  "Green Arrow": "Master Archer",
+  "Flash": "Speed Force Runner",
+  "Superman": "Powerhouse with Control"
+};
+
+const heroes = Object.keys(heroDescriptions);
+
+function openCharSelect() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("charSelect").style.display = "flex";
+  loadCharacters();
+}
+
+function openLevelSelect() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("levelSelect").style.display = "block";
+}
+
+function returnToMenu() {
+  document.getElementById("charSelect").style.display = "none";
+  document.getElementById("levelSelect").style.display = "none";
+  document.getElementById("gameContainer").style.display = "none";
+  document.getElementById("menu").style.display = "block";
+}
+
+function confirmCharacter() {
+  alert("Selected: " + selectedCharacter);
+  returnToMenu();
+}
+
+function chooseLevel(n) {
+  selectedLevel = n;
+  alert("Level " + n + " selected");
+  returnToMenu();
+}
+
+/* ---------- CHARACTER SELECT ---------- */
+function loadCharacters() {
+  const grid = document.getElementById("charGrid");
+  grid.innerHTML = "";
+
+  heroes.forEach(hero => {
+    const div = document.createElement("div");
+    div.className = "charIcon" + (hero === selectedCharacter ? " selected" : "");
+    div.innerText = hero;
+    div.onclick = () => {
+      selectedCharacter = hero;
+      updateCharPreview();
+      Array.from(grid.children).forEach(c => c.classList.remove("selected"));
+      div.classList.add("selected");
+    };
+    grid.appendChild(div);
+  });
+
+  updateCharPreview();
+}
+
+function updateCharPreview() {
+  document.getElementById("charName").innerText = selectedCharacter;
+  document.getElementById("charArt").innerHTML =
+    selectedCharacter + "<br>" + (heroDescriptions[selectedCharacter] || "");
+}
+
+/* ---------- GAME ENGINE ---------- */
+let ctx, canvas;
+let player, enemies, platforms, spikes, finish;
+let keys = {left:false,right:false,up:false,down:false,punch:false,rang:false};
+let cameraX = 0;
+let rangs = [];
+let punchTimer = 0;
+let lives = 3;
+let gameState = "play";
+
+function startGame() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("gameContainer").style.display = "block";
+  initGame();
+}
+
+function initGame() {
+  canvas = document.getElementById("canvas");
+  ctx = canvas.getContext("2d");
+
+  // SLOW & PRECISE MOVEMENT
+  const baseSpeed = 0.55;
+  const baseJump = -18;
+
+  let speed = baseSpeed;
+  let jump = baseJump;
+
+  if (selectedCharacter === "Flash") speed = 0.75;
+  if (selectedCharacter === "Nightwing" || selectedCharacter === "Robin") jump = -20;
+  if (selectedCharacter === "Catwoman") { speed = 0.65; jump = -19; }
+  if (selectedCharacter === "Superman") { jump = -16; }
+
+  player = {
+    x: 120, y: 320, w:40, h:90,
+    vx:0, vy:0,
+    speed:speed, jump:jump, gravity:0.9,
+    onGround:false, facing:1
+  };
+
+  lives = 3;
+  updateLivesUI();
+  setupLevel(selectedLevel);
+  bindControls();
+  gameState = "play";
+  requestAnimationFrame(gameLoop);
+}
+
+function setupLevel(level) {
+  if (level === 1) {
+    // Gotham Rooftops – hard
+    platforms = [
+      {x:0,y:500,w:2600,h:40},
+      {x:260,y:420,w:160,h:12},
+      {x:560,y:360,w:160,h:12},
+      {x:860,y:320,w:160,h:12},
+      {x:1160,y:280,w:160,h:12},
+      {x:1460,y:340,w:160,h:12},
+      {x:1760,y:300,w:160,h:12},
+      {x:2060,y:260,w:160,h:12}
+    ];
+
+    spikes = [
+      {x:380,y:480,w:80,h:20},
+      {x:900,y:480,w:120,h:20},
+      {x:1500,y:480,w:120,h:20},
+      {x:2100,y:480,w:120,h:20}
+    ];
+
+    enemies = [
+      {x:700,y:460,w:40,h:70,type:"Joker",hp:3},
+      {x:1300,y:460,w:40,h:70,type:"Two-Face",hp:3},
+      {x:1900,y:460,w:40,h:70,type:"Bane",hp:4}
+    ];
+
+    finish = {x:2400,y:420,w:40,h:80};
+  } else if (level === 2) {
+    // Ice Lab – very hard, Mr. Freeze
+    platforms = [
+      {x:0,y:500,w:2800,h:40},
+      {x:260,y:420,w:140,h:12},
+      {x:520,y:360,w:140,h:12},
+      {x:780,y:300,w:140,h:12},
+      {x:1040,y:260,w:140,h:12},
+      {x:1300,y:320,w:140,h:12},
+      {x:1560,y:280,w:140,h:12},
+      {x:1820,y:240,w:140,h:12},
+      {x:2080,y:300,w:140,h:12}
+    ];
+
+    spikes = [
+      {x:340,y:480,w:100,h:20},
+      {x:680,y:480,w:120,h:20},
+      {x:1020,y:480,w:140,h:20},
+      {x:1360,y:480,w:140,h:20},
+      {x:1700,y:480,w:160,h:20},
+      {x:2040,y:480,w:160,h:20}
+    ];
+
+    enemies = [
+      {x:650,y:460,w:40,h:70,type:"Freeze",hp:4},
+      {x:1200,y:460,w:40,h:70,type:"Deathstroke",hp:4},
+      {x:1900,y:460,w:40,h:70,type:"Joker",hp:5}
+    ];
+
+    finish = {x:2500,y:380,w:40,h:80};
+  } else {
+    // Arkham Escape – insane
+    platforms = [
+      {x:0,y:500,w:3000,h:40},
+      {x:260,y:420,w:140,h:12},
+      {x:520,y:360,w:120,h:12},
+      {x:780,y:300,w:120,h:12},
+      {x:1040,y:260,w:100,h:12},
+      {x:1300,y:320,w:100,h:12},
+      {x:1560,y:280,w:100,h:12},
+      {x:1820,y:240,w:100,h:12},
+      {x:2080,y:300,w:100,h:12},
+      {x:2340,y:260,w:100,h:12},
+      {x:2600,y:220,w:100,h:12}
+    ];
+
+    spikes = [
+      {x:340,y:480,w:100,h:20},
+      {x:680,y:480,w:120,h:20},
+      {x:1020,y:480,w:140,h:20},
+      {x:1360,y:480,w:140,h:20},
+      {x:1700,y:480,w:160,h:20},
+      {x:2040,y:480,w:160,h:20},
+      {x:2380,y:480,w:160,h:20},
+      {x:2720,y:480,w:160,h:20}
+    ];
+
+    enemies = [
+      {x:650,y:460,w:40,h:70,type:"Joker",hp:4},
+      {x:1200,y:460,w:40,h:70,type:"Scarecrow",hp:4},
+      {x:1800,y:460,w:40,h:70,type:"Bane",hp:5},
+      {x:2400,y:460,w:40,h:70,type:"Deathstroke",hp:5}
+    ];
+
+    finish = {x:2850,y:380,w:40,h:80};
+  }
+
+  rangs = [];
+  punchTimer = 0;
+  cameraX = 0;
+}
+
+function bindControls() {
+  function bind(id,key) {
+    const el = document.getElementById(id);
+    el.onmousedown = ()=>keys[key]=true;
+    el.onmouseup = ()=>keys[key]=false;
+    el.ontouchstart = e=>{e.preventDefault();keys[key]=true};
+    el.ontouchend = e=>{e.preventDefault();keys[key]=false};
+  }
+  bind("btn-left","left");
+  bind("btn-right","right");
+  bind("btn-up","up");
+  bind("btn-down","down");
+  bind("btn-punch","punch");
+  bind("btn-rang","rang");
+
+  window.onkeydown = e=>{
+    if (e.key==="ArrowLeft"||e.key==="a") keys.left=true;
+    if (e.key==="ArrowRight"||e.key==="d") keys.right=true;
+    if (e.key==="ArrowUp"||e.key==="w") keys.up=true;
+    if (e.key==="ArrowDown"||e.key==="s") keys.down=true;
+    if (e.key==="j") keys.punch=true;
+    if (e.key==="k") keys.rang=true;
+  };
+  window.onkeyup = e=>{
+    if (e.key==="ArrowLeft"||e.key==="a") keys.left=false;
+    if (e.key==="ArrowRight"||e.key==="d") keys.right=false;
+    if (e.key==="ArrowUp"||e.key==="w") keys.up=false;
+    if (e.key==="ArrowDown"||e.key==="s") keys.down=false;
+    if (e.key==="j") keys.punch=false;
+    if (e.key==="k") keys.rang=false;
+  };
+}
+
+function gameLoop() {
+  if (gameState === "play") {
+    update();
+    draw();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function update() {
+  // movement (slow & precise)
+  if (keys.left) { player.vx -= player.speed * 0.6; player.facing = -1; }
+  if (keys.right) { player.vx += player.speed * 0.6; player.facing = 1; }
+
+  player.vy += player.gravity;
+
+  if (keys.up && player.onGround) {
+    player.vy = player.jump;
+    player.onGround = false;
+  }
+
+  player.x += player.vx;
+  player.y += player.vy;
+  player.vx *= 0.88;
+
+  // ground/platforms
+  player.onGround = false;
+  platforms.forEach(p=>{
+    if (player.x+player.w/2>p.x && player.x-player.w/2<p.x+p.w) {
+      if (player.y+player.h/2>p.y && player.y+player.h/2<p.y+p.h) {
+        player.y = p.y-player.h/2;
+        player.vy = 0;
+        player.onGround = true;
+      }
+    }
+  });
+
+  // spikes
+  spikes.forEach(s=>{
+    if (player.x+player.w/2>s.x && player.x-player.w/2<s.x+s.w &&
+        player.y+player.h/2>s.y) {
+      loseLife();
+    }
+  });
+
+  // fall death
+  if (player.y > 700) loseLife();
+
+  // enemies contact
+  enemies.forEach(e=>{
+    if (e.hp<=0) return;
+    if (Math.abs(player.x-e.x)<50 && Math.abs(player.y-e.y)<80) {
+      loseLife();
+    }
+  });
+
+  // finish
+  if (player.x>finish.x && player.y>finish.y-120) {
+    gameState = "complete";
+    document.getElementById("levelcomplete").classList.add("visible");
+  }
+
+  // combat
+  if (keys.punch) punchTimer = 8;
+  if (punchTimer>0) punchTimer--;
+
+  if (keys.rang && rangs.length<3) {
+    rangs.push({
+      x: player.x + player.facing*30,
+      y: player.y-20,
+      vx: player.facing*10,
+      angle: 0
+    });
+  }
+
+  rangs.forEach(r=>{
+    r.x += r.vx;
+    r.angle += 0.4;
+  });
+
+  rangs = rangs.filter(r=>{
+    let alive = true;
+    enemies.forEach(e=>{
+      if (e.hp<=0) return;
+      if (r.x>e.x-20 && r.x<e.x+20 && r.y>e.y-70 && r.y<e.y) {
+        e.hp -= 1;
+        alive = false;
+      }
+    });
+    return alive && r.x>-100 && r.x<4000;
+  });
+
+  if (punchTimer>0) {
+    enemies.forEach(e=>{
+      if (e.hp<=0) return;
+      const dx = e.x-player.x;
+      const dy = (e.y-40)-player.y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist<70 && Math.sign(dx)===player.facing) {
+        e.hp -= 0.3;
+      }
+    });
+  }
+
+  // camera
+  cameraX = player.x - canvas.width/2;
+  if (cameraX<0) cameraX=0;
+
+  // show combat buttons near enemies
+  let inCombat = enemies.some(e=>{
+    if (e.hp<=0) return false;
+    return Math.abs(e.x-player.x)<220 && Math.abs(e.y-player.y)<120;
+  });
+  document.getElementById("combatBtns").classList.toggle("visible", inCombat);
+}
+
+function loseLife() {
+  if (gameState !== "play") return;
+  lives--;
+  updateLivesUI();
+  if (lives <= 0) {
+    gameState = "dead";
+    document.getElementById("gameover").classList.add("visible");
+  } else {
+    respawnPlayer();
+  }
+}
+
+function respawnPlayer() {
+  player.x = 120;
+  player.y = 320;
+  player.vx = 0;
+  player.vy = 0;
+  cameraX = 0;
+}
+
+function updateLivesUI() {
+  for (let i=1;i<=3;i++) {
+    document.getElementById("life"+i).classList.toggle("empty", i>lives);
+  }
+}
+
+function retryGame() {
+  document.getElementById("gameover").classList.remove("visible");
+  initGame();
+}
+
+function backToMenuFromGame() {
+  document.getElementById("gameover").classList.remove("visible");
+  document.getElementById("levelcomplete").classList.remove("visible");
+  returnToMenu();
+}
+
+function nextOrMenu() {
+  document.getElementById("levelcomplete").classList.remove("visible");
+  if (selectedLevel < 3) {
+    selectedLevel++;
+    initGame();
+  } else {
+    returnToMenu();
+  }
+}
+
+/* ---------- DRAWING ---------- */
+function draw() {
+  // background
+  const w = canvas.width;
+  const h = canvas.height;
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,"#0d47a1");
+  grad.addColorStop(0.5,"#111827");
+  grad.addColorStop(1,"#020617");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,w,h);
+
+  // ground
+  ctx.fillStyle = "#020617";
+  ctx.fillRect(0,500,w,40);
+
+  // platforms
+  ctx.fillStyle = "#222831";
+  platforms.forEach(p=>{
+    ctx.fillRect(p.x-cameraX,p.y,p.w,p.h);
+  });
+
+  // spikes
+  spikes.forEach(s=>{
+    const sx = s.x-cameraX;
+    ctx.fillStyle = "#b91c1c";
+    ctx.fillRect(sx,s.y,s.w,s.h);
+    ctx.fillStyle = "#f97316";
+    const count = Math.floor(s.w/20);
+    for (let i=0;i<count;i++) {
+      const x0 = sx + i*20;
+      ctx.beginPath();
+      ctx.moveTo(x0,s.y);
+      ctx.lineTo(x0+10,s.y-18);
+      ctx.lineTo(x0+20,s.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+
+  // finish
+  const fx = finish.x-cameraX;
+  ctx.fillStyle = "#facc15";
+  ctx.fillRect(fx,finish.y,finish.w,finish.h);
+  ctx.fillStyle = "#f97316";
+  ctx.fillRect(fx+8,finish.y-24,finish.w-16,24);
+
+  // enemies (stylized silhouettes with accents)
+  enemies.forEach(e=>{
+    if (e.hp<=0) return;
+    const sx = e.x-cameraX;
+    const sy = e.y;
+    ctx.save();
+    ctx.translate(sx,sy);
+
+    // base silhouette
+    let bodyColor = "purple";
+    if (e.type==="Freeze") bodyColor = "#06b6d4";
+    else if (e.type==="Bane") bodyColor = "#7f1d1d";
+    else if (e.type==="Deathstroke") bodyColor = "#f97316";
+    else if (e.type==="Two-Face") bodyColor = "#6b21a8";
+    else if (e.type==="Scarecrow") bodyColor = "#92400e";
+
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.moveTo(-18,-60);
+    ctx.lineTo(-24,-20);
+    ctx.lineTo(-20,10);
+    ctx.lineTo(20,10);
+    ctx.lineTo(24,-20);
+    ctx.lineTo(18,-60);
+    ctx.closePath();
+    ctx.fill();
+
+    // head silhouette
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.ellipse(0,-72,14,16,0,0,Math.PI*2);
+    ctx.fill();
+
+    // accents
+    if (e.type==="Joker") {
+      // green hair + white face
+      ctx.fillStyle = "#22c55e";
+      ctx.beginPath();
+      ctx.moveTo(-14,-80);
+      ctx.quadraticCurveTo(0,-92,14,-80);
+      ctx.lineTo(10,-76);
+      ctx.quadraticCurveTo(0,-84,-10,-76);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#e5e7eb";
+      ctx.fillRect(-10,-76,20,10);
+    } else if (e.type==="Freeze") {
+      // dome + tank
+      ctx.strokeStyle = "#e0f2fe";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0,-72,16,Math.PI,0);
+      ctx.stroke();
+
+      ctx.fillStyle = "#0ea5e9";
+      ctx.fillRect(14,-40,8,24);
+    } else if (e.type==="Bane") {
+      // mask + tubes
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(-8,-78,16,14);
+      ctx.strokeStyle = "#22c55e";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-8,-72);
+      ctx.bezierCurveTo(-20,-60,-20,-40,-10,-30);
+      ctx.moveTo(8,-72);
+      ctx.bezierCurveTo(20,-60,20,-40,10,-30);
+      ctx.stroke();
+    } else if (e.type==="Deathstroke") {
+      // half mask
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(-14,-80,28,16);
+      ctx.fillStyle = "#f97316";
+      ctx.fillRect(0,-80,14,16);
+    } else if (e.type==="Two-Face") {
+      // split face
+      ctx.fillStyle = "#e5e7eb";
+      ctx.fillRect(-14,-80,14,16);
+      ctx.fillStyle = "#6b21a8";
+      ctx.fillRect(0,-80,14,16);
+    } else if (e.type==="Scarecrow") {
+      // hat + long arms
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(-18,-84,36,6);
+      ctx.fillRect(-10,-90,20,6);
+      ctx.fillStyle = "#92400e";
+      ctx.fillRect(-30,-40,10,6);
+      ctx.fillRect(20,-40,10,6);
+    }
+
+    ctx.restore();
+  });
+
+  // rangs
+  ctx.fillStyle = "#facc15";
+  rangs.forEach(r=>{
+    const sx = r.x-cameraX;
+    ctx.save();
+    ctx.translate(sx,r.y);
+    ctx.rotate(r.angle);
+    ctx.fillRect(-12,-3,24,6);
+    ctx.restore();
+  });
+
+  // player – stylized, more realistic
+  drawHero(selectedCharacter, player.x-cameraX, player.y, punchTimer>0, player.facing);
+}
+
+function drawHero(name, x, y, punching, facing) {
+  ctx.save();
+  ctx.translate(x,y);
+  if (facing<0) ctx.scale(-1,1);
+
+  const s = 1;
+
+  // cape
+  ctx.fillStyle = name==="Nightwing" ? "#020617" :
+                  name==="Batgirl" ? "#1f2937" :
+                  name==="Red Hood" ? "#111827" :
+                  "#050608";
+  ctx.beginPath();
+  ctx.moveTo(-24*s, -40*s);
+  ctx.quadraticCurveTo(-40*s, 10*s, -20*s, 48*s);
+  ctx.lineTo(20*s, 48*s);
+  ctx.quadraticCurveTo(40*s, 10*s, 24*s, -40*s);
+  ctx.closePath();
+  ctx.fill();
+
+  // torso
+  ctx.fillStyle =
+    name==="Flash" ? "#b91c1c" :
+    name==="Green Arrow" ? "#065f46" :
+    name==="Superman" ? "#1d4ed8" :
+    name==="Nightwing" ? "#111827" :
+    name==="Robin" ? "#b91c1c" :
+    name==="Batgirl" ? "#1f2937" :
+    name==="Catwoman" ? "#111827" :
+    name==="Red Hood" ? "#111827" :
+    "#111827";
+  ctx.fillRect(-16*s, -40*s, 32*s, 50*s);
+
+  // symbol / chest accent
+  if (name==="Batman" || name==="Batgirl") {
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.moveTo(-9*s, -20*s);
+    ctx.lineTo(-5*s, -24*s);
+    ctx.lineTo(-2*s, -21*s);
+    ctx.lineTo(0, -24*s);
+    ctx.lineTo(2*s, -21*s);
+    ctx.lineTo(5*s, -24*s);
+    ctx.lineTo(9*s, -20*s);
+    ctx.lineTo(5*s, -16*s);
+    ctx.lineTo(0, -14*s);
+    ctx.lineTo(-5*s, -16*s);
+    ctx.closePath();
+    ctx.fill();
+  } else if (name==="Nightwing") {
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.moveTo(-14*s,-22*s);
+    ctx.lineTo(0,-10*s);
+    ctx.lineTo(14*s,-22*s);
+    ctx.lineTo(0,-16*s);
+    ctx.closePath();
+    ctx.fill();
+  } else if (name==="Robin") {
+    ctx.fillStyle = "#facc15";
+    ctx.fillRect(-4*s,-22*s,8*s,8*s);
+  } else if (name==="Green Arrow") {
+    ctx.fillStyle = "#22c55e";
+    ctx.fillRect(-6*s,-22*s,12*s,6*s);
+  } else if (name==="Flash") {
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.arc(0,-20*s,8*s,0,Math.PI*2);
+    ctx.fill();
+  } else if (name==="Superman") {
+    ctx.fillStyle = "#f97316";
+    ctx.beginPath();
+    ctx.moveTo(0,-24*s);
+    ctx.lineTo(-8*s,-16*s);
+    ctx.lineTo(0,-8*s);
+    ctx.lineTo(8*s,-16*s);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // belt
+  ctx.fillStyle = "#facc15";
+  ctx.fillRect(-16*s, 6*s, 32*s, 4*s);
+
+  // legs
+  ctx.fillStyle =
+    name==="Flash" ? "#7f1d1d" :
+    name==="Green Arrow" ? "#064e3b" :
+    name==="Superman" ? "#1d4ed8" :
+    "#111827";
+  ctx.fillRect(-10*s, 10*s, 8*s, 35*s);
+  ctx.fillRect(2*s, 10*s, 8*s, 35*s);
+
+  // boots
+  ctx.fillStyle = "#020617";
+  ctx.fillRect(-10*s, 40*s, 8*s, 8*s);
+  ctx.fillRect(2*s, 40*s, 8*s, 8*s);
+
+  // arms
+  ctx.fillStyle =
+    name==="Flash" ? "#b91c1c" :
+    name==="Green Arrow" ? "#065f46" :
+    name==="Superman" ? "#1d4ed8" :
+    name==="Nightwing" ? "#111827" :
+    name==="Robin" ? "#b91c1c" :
+    name==="Batgirl" ? "#1f2937" :
+    name==="Catwoman" ? "#111827" :
+    name==="Red Hood" ? "#111827" :
+    "#111827";
+  ctx.beginPath();
+  ctx.moveTo(-16*s, -18*s);
+  ctx.lineTo(-26*s, 4*s);
+  ctx.lineTo(-20*s, 8*s);
+  ctx.lineTo(-12*s, -10*s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(16*s, -18*s);
+  ctx.lineTo(26*s, 4*s);
+  ctx.lineTo(20*s, 8*s);
+  ctx.lineTo(12*s, -10*s);
+  ctx.closePath();
+  ctx.fill();
+
+  // head + cowl / hair
+  ctx.fillStyle = "#050608";
+  ctx.beginPath();
+  ctx.moveTo(-12*s, -40*s);
+  ctx.lineTo(-12*s, -28*s);
+  ctx.quadraticCurveTo(0, -24*s, 12*s, -28*s);
+  ctx.lineTo(12*s, -40*s);
+  if (name==="Batman" || name==="Batgirl") {
+    ctx.lineTo(6*s, -48*s);
+    ctx.lineTo(0, -44*s);
+    ctx.lineTo(-6*s, -48*s);
+  } else if (name==="Catwoman") {
+    ctx.lineTo(6*s,-46*s);
+    ctx.lineTo(0,-42*s);
+    ctx.lineTo(-6*s,-46*s);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // face
+  ctx.fillStyle = "#f9d3b4";
+  ctx.fillRect(-8*s, -32*s, 16*s, 8*s);
+
+  // eyes
+  ctx.fillStyle = "#e5f4ff";
+  ctx.fillRect(-5*s, -30*s, 4*s, 2*s);
+  ctx.fillRect(1*s, -30*s, 4*s, 2*s);
+
+  // punch arc
+  if (punching) {
+    ctx.strokeStyle = "#ff2f92";
+    ctx.lineWidth = 4;
+    const dir = 1;
+    ctx.beginPath();
+    ctx.arc(12*dir,-40,40,-0.4,0.6);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+</script>
+
+</body>
+</html>
